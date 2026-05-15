@@ -11,7 +11,7 @@ import { KENYAN_COUNTIES, FARM_TYPES } from '../../lib/constants';
 import toast from 'react-hot-toast';
 
 export function FarmSetupPage() {
-  const { user } = useAuth();
+  const { userId } = useAuth();
   const { farms, refreshFarms } = useFarm();
   const { createFarm, loading } = useFarms();
   const navigate = useNavigate();
@@ -25,7 +25,7 @@ export function FarmSetupPage() {
     description: '',
   });
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!userId) return <Navigate to="/login" replace />;
   if (farms.length > 0) return <Navigate to="/dashboard" replace />;
 
   function update(field: string, value: string) {

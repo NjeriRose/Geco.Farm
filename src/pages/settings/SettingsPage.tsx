@@ -120,7 +120,7 @@ export function SettingsPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Size (acres)" type="number" value={farmForm.size_acres} onChange={(e) => setFarmForm({ ...farmForm, size_acres: e.target.value })} min="0" step="0.1" />
-                <Select label="Farm Type" value={farmForm.farm_type} onChange={(e) => setFarmForm({ ...farmForm, farm_type: e.target.value })} options={[...FARM_TYPES]} />
+                <Select label="Farm Type" value={farmForm.farm_type} onChange={(e) => setFarmForm({ ...farmForm, farm_type: e.target.value as 'crop' | 'livestock' | 'mixed' | 'aquaculture' })} options={[...FARM_TYPES]} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Latitude" type="number" value={farmForm.latitude} onChange={(e) => setFarmForm({ ...farmForm, latitude: e.target.value })}

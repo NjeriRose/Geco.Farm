@@ -2,9 +2,9 @@ import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Sprout, Beef, Wallet, Menu } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useState } from 'react';
-import { Package, ClipboardList, CloudSun, FileText, Settings, LogOut, Leaf, X } from 'lucide-react';
+import { Package, ClipboardList, CloudSun, FileText, Settings, Leaf, X } from 'lucide-react';
+import { UserButton } from '@clerk/react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getInitials } from '../../lib/utils';
 
 const mainTabs = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
@@ -23,11 +23,10 @@ const moreItems = [
 
 export function MobileNav() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { profile, signOut } = useAuth();
+  const { profile } = useAuth();
 
   return (
     <>
-      {/* Bottom tab bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 safe-area-bottom">
         <div className="flex items-center justify-around px-2 py-1">
           {mainTabs.map((tab) => (
@@ -55,7 +54,6 @@ export function MobileNav() {
         </div>
       </nav>
 
-      {/* Slide-up menu */}
       {menuOpen && (
         <div className="md:hidden fixed inset-0 z-50">
           <div className="fixed inset-0 bg-black/50" onClick={() => setMenuOpen(false)} />
@@ -93,19 +91,10 @@ export function MobileNav() {
 
             <div className="px-3 py-3 border-t border-slate-200">
               <div className="flex items-center gap-3 px-4 py-2">
-                <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-sm font-semibold text-green-700">
-                  {profile ? getInitials(profile.full_name) : '?'}
-                </div>
+                <UserButton />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-slate-900">{profile?.full_name}</p>
                 </div>
-                <button
-                  onClick={() => { signOut(); setMenuOpen(false); }}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign Out
-                </button>
               </div>
             </div>
           </div>

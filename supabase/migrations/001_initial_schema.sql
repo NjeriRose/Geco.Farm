@@ -1,15 +1,15 @@
 -- Geco Farm — Initial Database Schema
+-- Auth: Clerk (external), Database: Supabase (PostgreSQL)
 -- All financial fields in Kenyan Shillings (KES)
--- RLS policies for multi-tenant farm isolation
+-- User IDs are Clerk text IDs (e.g. user_xxx)
 
--- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
 -- ============================================================
--- 1. PROFILES (extends auth.users)
+-- 1. PROFILES
 -- ============================================================
 create table if not exists profiles (
-  id uuid primary key references auth.users on delete cascade,
+  id text primary key,
   full_name text not null,
   phone text,
   role text not null default 'farmer' check (role in ('admin','manager','worker','farmer')),
@@ -19,17 +19,12 @@ create table if not exists profiles (
   updated_at timestamptz default now()
 );
 
-alter table profiles enable row level security;
-create policy "Users can view own profile" on profiles for select using (auth.uid() = id);
-create policy "Users can update own profile" on profiles for update using (auth.uid() = id);
-create policy "Users can insert own profile" on profiles for insert with check (auth.uid() = id);
-
 -- ============================================================
 -- 2. FARMS
 -- ============================================================
 create table if not exists farms (
   id uuid primary key default uuid_generate_v4(),
-  owner_id uuid not null references auth.users on delete cascade,
+  owner_id text not null,
   name text not null,
   county text not null,
   location text,
@@ -42,14 +37,7 @@ create table if not exists farms (
   updated_at timestamptz default now()
 );
 
-alter table farms enable row level security;
-create policy "Farm members can view farms" on farms for select using (
-  id in (select farm_id from farm_members where user_id = auth.uid())
-  or owner_id = auth.uid()
-);
-create policy "Owner can update farm" on farms for update using (owner_id = auth.uid());
-create policy "Authenticated users can create farms" on farms for insert with check (auth.uid() = owner_id);
-create policy "Owner can delete farm" on farms for delete using (owner_id = auth.uid());
+create index idx_farms_owner on farms(owner_id);
 
 -- ============================================================
 -- 3. FARM_MEMBERS
@@ -57,19 +45,13 @@ create policy "Owner can delete farm" on farms for delete using (owner_id = auth
 create table if not exists farm_members (
   id uuid primary key default uuid_generate_v4(),
   farm_id uuid not null references farms on delete cascade,
-  user_id uuid not null references auth.users on delete cascade,
+  user_id text not null,
   role text not null default 'worker' check (role in ('owner','manager','worker')),
   created_at timestamptz default now(),
   unique(farm_id, user_id)
 );
 
-alter table farm_members enable row level security;
-create policy "Members can view farm members" on farm_members for select using (
-  farm_id in (select farm_id from farm_members as fm where fm.user_id = auth.uid())
-);
-create policy "Farm owner can manage members" on farm_members for all using (
-  farm_id in (select id from farms where owner_id = auth.uid())
-);
+create index idx_farm_members_user on farm_members(user_id);
 
 -- ============================================================
 -- 4. FIELDS
@@ -87,11 +69,7 @@ create table if not exists fields (
   updated_at timestamptz default now()
 );
 
-alter table fields enable row level security;
-create policy "Farm members can manage fields" on fields for all using (
-  farm_id in (select farm_id from farm_members where user_id = auth.uid())
-  or farm_id in (select id from farms where owner_id = auth.uid())
-);
+create index idx_fields_farm on fields(farm_id);
 
 -- ============================================================
 -- 5. CROP_TYPES (global reference table)
@@ -105,9 +83,6 @@ create table if not exists crop_types (
   description text,
   created_at timestamptz default now()
 );
-
-alter table crop_types enable row level security;
-create policy "Anyone can read crop types" on crop_types for select using (true);
 
 -- ============================================================
 -- 6. PLANTINGS
@@ -131,11 +106,7 @@ create table if not exists plantings (
   updated_at timestamptz default now()
 );
 
-alter table plantings enable row level security;
-create policy "Farm members can manage plantings" on plantings for all using (
-  farm_id in (select farm_id from farm_members where user_id = auth.uid())
-  or farm_id in (select id from farms where owner_id = auth.uid())
-);
+create index idx_plantings_farm on plantings(farm_id);
 
 -- ============================================================
 -- 7. HARVESTS
@@ -153,11 +124,7 @@ create table if not exists harvests (
   created_at timestamptz default now()
 );
 
-alter table harvests enable row level security;
-create policy "Farm members can manage harvests" on harvests for all using (
-  farm_id in (select farm_id from farm_members where user_id = auth.uid())
-  or farm_id in (select id from farms where owner_id = auth.uid())
-);
+create index idx_harvests_farm on harvests(farm_id);
 
 -- ============================================================
 -- 8. LIVESTOCK_TYPES (global reference table)
@@ -170,9 +137,6 @@ create table if not exists livestock_types (
   description text,
   created_at timestamptz default now()
 );
-
-alter table livestock_types enable row level security;
-create policy "Anyone can read livestock types" on livestock_types for select using (true);
 
 -- ============================================================
 -- 9. LIVESTOCK
@@ -195,11 +159,7 @@ create table if not exists livestock (
   updated_at timestamptz default now()
 );
 
-alter table livestock enable row level security;
-create policy "Farm members can manage livestock" on livestock for all using (
-  farm_id in (select farm_id from farm_members where user_id = auth.uid())
-  or farm_id in (select id from farms where owner_id = auth.uid())
-);
+create index idx_livestock_farm on livestock(farm_id);
 
 -- ============================================================
 -- 10. LIVESTOCK_HEALTH_RECORDS
@@ -220,11 +180,7 @@ create table if not exists livestock_health_records (
   created_at timestamptz default now()
 );
 
-alter table livestock_health_records enable row level security;
-create policy "Farm members can manage health records" on livestock_health_records for all using (
-  farm_id in (select farm_id from farm_members where user_id = auth.uid())
-  or farm_id in (select id from farms where owner_id = auth.uid())
-);
+create index idx_health_records_farm on livestock_health_records(farm_id);
 
 -- ============================================================
 -- 11. PRODUCTION_RECORDS
@@ -242,11 +198,7 @@ create table if not exists production_records (
   created_at timestamptz default now()
 );
 
-alter table production_records enable row level security;
-create policy "Farm members can manage production" on production_records for all using (
-  farm_id in (select farm_id from farm_members where user_id = auth.uid())
-  or farm_id in (select id from farms where owner_id = auth.uid())
-);
+create index idx_production_farm on production_records(farm_id);
 
 -- ============================================================
 -- 12. INVENTORY_CATEGORIES (global reference)
@@ -257,9 +209,6 @@ create table if not exists inventory_categories (
   description text,
   created_at timestamptz default now()
 );
-
-alter table inventory_categories enable row level security;
-create policy "Anyone can read categories" on inventory_categories for select using (true);
 
 -- ============================================================
 -- 13. INVENTORY
@@ -281,11 +230,7 @@ create table if not exists inventory (
   updated_at timestamptz default now()
 );
 
-alter table inventory enable row level security;
-create policy "Farm members can manage inventory" on inventory for all using (
-  farm_id in (select farm_id from farm_members where user_id = auth.uid())
-  or farm_id in (select id from farms where owner_id = auth.uid())
-);
+create index idx_inventory_farm on inventory(farm_id);
 
 -- ============================================================
 -- 14. INVENTORY_TRANSACTIONS
@@ -303,11 +248,7 @@ create table if not exists inventory_transactions (
   created_at timestamptz default now()
 );
 
-alter table inventory_transactions enable row level security;
-create policy "Farm members can manage transactions" on inventory_transactions for all using (
-  farm_id in (select farm_id from farm_members where user_id = auth.uid())
-  or farm_id in (select id from farms where owner_id = auth.uid())
-);
+create index idx_inv_txn_farm on inventory_transactions(farm_id);
 
 -- ============================================================
 -- 15. EXPENSES
@@ -321,17 +262,13 @@ create table if not exists expenses (
   payment_method text default 'cash' check (payment_method in ('cash','mpesa','bank_transfer','cheque','credit')),
   reference_number text,
   expense_date date not null,
-  recorded_by uuid references auth.users,
+  recorded_by text,
   receipt_url text,
   notes text,
   created_at timestamptz default now()
 );
 
-alter table expenses enable row level security;
-create policy "Farm members can manage expenses" on expenses for all using (
-  farm_id in (select farm_id from farm_members where user_id = auth.uid())
-  or farm_id in (select id from farms where owner_id = auth.uid())
-);
+create index idx_expenses_farm on expenses(farm_id);
 
 -- ============================================================
 -- 16. SALES
@@ -351,16 +288,12 @@ create table if not exists sales (
   payment_status text default 'paid' check (payment_status in ('paid','pending','partial','overdue')),
   reference_number text,
   sale_date date not null,
-  recorded_by uuid references auth.users,
+  recorded_by text,
   notes text,
   created_at timestamptz default now()
 );
 
-alter table sales enable row level security;
-create policy "Farm members can manage sales" on sales for all using (
-  farm_id in (select farm_id from farm_members where user_id = auth.uid())
-  or farm_id in (select id from farms where owner_id = auth.uid())
-);
+create index idx_sales_farm on sales(farm_id);
 
 -- ============================================================
 -- 17. TASKS
@@ -370,7 +303,7 @@ create table if not exists tasks (
   farm_id uuid not null references farms on delete cascade,
   title text not null,
   description text,
-  assigned_to uuid references auth.users,
+  assigned_to text,
   priority text default 'medium' check (priority in ('low','medium','high','urgent')),
   status text default 'pending' check (status in ('pending','in_progress','completed','cancelled','overdue')),
   category text default 'general' check (category in ('planting','harvesting','irrigation','spraying','feeding','milking','veterinary','maintenance','transport','general')),
@@ -381,11 +314,7 @@ create table if not exists tasks (
   updated_at timestamptz default now()
 );
 
-alter table tasks enable row level security;
-create policy "Farm members can manage tasks" on tasks for all using (
-  farm_id in (select farm_id from farm_members where user_id = auth.uid())
-  or farm_id in (select id from farms where owner_id = auth.uid())
-);
+create index idx_tasks_farm on tasks(farm_id);
 
 -- ============================================================
 -- 18. ACTIVITY_LOG
@@ -393,7 +322,7 @@ create policy "Farm members can manage tasks" on tasks for all using (
 create table if not exists activity_log (
   id uuid primary key default uuid_generate_v4(),
   farm_id uuid not null references farms on delete cascade,
-  user_id uuid references auth.users,
+  user_id text,
   action text not null,
   entity_type text not null,
   entity_id uuid,
@@ -401,33 +330,4 @@ create table if not exists activity_log (
   created_at timestamptz default now()
 );
 
-alter table activity_log enable row level security;
-create policy "Farm members can read activity" on activity_log for select using (
-  farm_id in (select farm_id from farm_members where user_id = auth.uid())
-  or farm_id in (select id from farms where owner_id = auth.uid())
-);
-create policy "System can insert activity" on activity_log for insert with check (true);
-
--- ============================================================
--- TRIGGER: auto-create profile on signup
--- ============================================================
-create or replace function handle_new_user()
-returns trigger as $$
-begin
-  insert into profiles (id, full_name, phone, county, role)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data->>'full_name', 'New User'),
-    new.raw_user_meta_data->>'phone',
-    new.raw_user_meta_data->>'county',
-    'farmer'
-  )
-  on conflict (id) do nothing;
-  return new;
-end;
-$$ language plpgsql security definer;
-
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function handle_new_user();
+create index idx_activity_farm on activity_log(farm_id);

@@ -14,13 +14,13 @@ interface FarmContextType {
 const FarmContext = createContext<FarmContextType | undefined>(undefined);
 
 export function FarmProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { userId } = useAuth();
   const [farms, setFarms] = useState<Farm[]>([]);
   const [activeFarm, setActiveFarmState] = useState<Farm | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function loadFarms() {
-    if (!user) {
+    if (!userId) {
       setFarms([]);
       setActiveFarmState(null);
       setLoading(false);
@@ -30,7 +30,7 @@ export function FarmProvider({ children }: { children: ReactNode }) {
     const { data: memberRows } = await supabase
       .from('farm_members')
       .select('farm_id')
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
 
     const farmIds = memberRows?.map((r) => r.farm_id) ?? [];
 
@@ -38,7 +38,7 @@ export function FarmProvider({ children }: { children: ReactNode }) {
       const { data: ownedFarms } = await supabase
         .from('farms')
         .select('*')
-        .eq('owner_id', user.id)
+        .eq('owner_id', userId)
         .order('created_at', { ascending: false });
 
       const list = (ownedFarms as Farm[]) ?? [];
@@ -65,7 +65,7 @@ export function FarmProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadFarms();
-  }, [user]);
+  }, [userId]);
 
   function setActiveFarm(farm: Farm) {
     setActiveFarmState(farm);

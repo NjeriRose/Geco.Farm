@@ -47,8 +47,8 @@ export function TasksPage() {
     const data = {
       title: form.title,
       description: form.description || undefined,
-      priority: form.priority,
-      category: form.category,
+      priority: form.priority as 'low' | 'medium' | 'high' | 'urgent',
+      category: form.category as 'planting' | 'harvesting' | 'irrigation' | 'spraying' | 'feeding' | 'milking' | 'veterinary' | 'maintenance' | 'transport' | 'general',
       due_date: form.due_date || undefined,
       notes: form.notes || undefined,
     };

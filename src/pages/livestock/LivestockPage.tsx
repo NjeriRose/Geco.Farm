@@ -55,7 +55,7 @@ export function LivestockPage() {
       livestock_type_id: form.livestock_type_id,
       tag_number: form.tag_number || undefined,
       name: form.name || undefined,
-      gender: form.gender || undefined,
+      gender: (form.gender || undefined) as 'male' | 'female' | undefined,
       date_of_birth: form.date_of_birth || undefined,
       date_acquired: form.date_acquired || undefined,
       acquisition_cost_kes: parseFloat(form.acquisition_cost_kes) || 0,

@@ -7,14 +7,14 @@ import { useFarm } from '../../contexts/FarmContext';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 
 export function AppLayout() {
-  const { user, loading: authLoading } = useAuth();
+  const { userId, loading: authLoading } = useAuth();
   const { farms, loading: farmLoading } = useFarm();
 
   if (authLoading || farmLoading) {
     return <LoadingSpinner size="lg" />;
   }
 
-  if (!user) {
+  if (!userId) {
     return <Navigate to="/login" replace />;
   }
 

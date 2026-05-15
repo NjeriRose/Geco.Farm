@@ -55,7 +55,7 @@ export function CropsPage() {
     const data = {
       field_id: form.field_id,
       crop_type_id: form.crop_type_id,
-      season: form.season || undefined,
+      season: (form.season || undefined) as 'long_rains' | 'short_rains' | 'irrigated' | 'year_round' | undefined,
       planting_date: form.planting_date,
       expected_harvest_date: form.expected_harvest_date || undefined,
       area_acres: parseFloat(form.area_acres) || 0,

@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import type { Farm } from '../types';
 
 export function useFarms() {
-  const { user } = useAuth();
+  const { userId } = useAuth();
   const [loading, setLoading] = useState(false);
 
   async function createFarm(farm: {
@@ -17,19 +17,19 @@ export function useFarms() {
     latitude?: number;
     longitude?: number;
   }) {
-    if (!user) return { data: null, error: 'Not authenticated' };
+    if (!userId) return { data: null, error: 'Not authenticated' };
     setLoading(true);
 
     const { data, error } = await supabase
       .from('farms')
-      .insert({ ...farm, owner_id: user.id })
+      .insert({ ...farm, owner_id: userId })
       .select()
       .single();
 
     if (data && !error) {
       await supabase.from('farm_members').insert({
         farm_id: data.id,
-        user_id: user.id,
+        user_id: userId,
         role: 'owner',
       });
     }
